@@ -24,6 +24,7 @@ import argparse
 import time
 import yaml
 import os
+import re
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -35,6 +36,11 @@ from pathlib import Path
 # ─────────────────────────────────────────────
 # Configuration loader
 # ─────────────────────────────────────────────
+
+def redact_api_key(text: str) -> str:
+    """Strip api_key query-param values out of error messages before logging."""
+    return re.sub(r"(api_key=)[^&\s]+", r"\1***REDACTED***", text)
+
 
 def load_config(path: str = "production_config.yaml") -> dict:
     with open(path, "r") as f:
@@ -233,7 +239,7 @@ def fetch_sam_opportunities(config: dict, lookback_days: int = 2) -> list[Produc
                 leads.append(lead)
 
     except requests.RequestException as e:
-        logging.error(f"SAM opportunities fetch failed: {e}")
+        logging.error(f"SAM opportunities fetch failed: {redact_api_key(str(e))}")
 
     return leads
 
@@ -329,7 +335,7 @@ def fetch_sam_awards(config: dict, lookback_days: int = 2) -> list[ProductionLea
                 leads.append(lead)
 
     except requests.RequestException as e:
-        logging.error(f"SAM awards fetch failed: {e}")
+        logging.error(f"SAM awards fetch failed: {redact_api_key(str(e))}")
 
     return leads
 
