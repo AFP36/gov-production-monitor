@@ -47,6 +47,10 @@ def load_config(path: str = "production_config.yaml") -> dict:
         config["alerts"]["email"]["sender"] = os.environ["EMAIL_SENDER"]
     if os.environ.get("EMAIL_PASSWORD"):
         config["alerts"]["email"]["password"] = os.environ["EMAIL_PASSWORD"]
+    if os.environ.get("EMAIL_RECIPIENTS"):
+        config["alerts"]["email"]["recipients"] = [
+            addr.strip() for addr in os.environ["EMAIL_RECIPIENTS"].split(",") if addr.strip()
+        ]
 
     return config
 
