@@ -1,0 +1,5 @@
+production_monitor.log
+production_results.csv
+__pycache__/
+*.pyc
+.env

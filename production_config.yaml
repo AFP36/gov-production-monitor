@@ -1,0 +1,215 @@
+# ============================================================
+# GOVERNMENT PRODUCTION CONTRACT MONITOR — CONFIG
+# Companion to the trading strategy monitor
+# ============================================================
+
+# --- API KEYS (fill these in) ---
+api_keys:
+  sam_gov: "YOUR_SAM_GOV_API_KEY"        # https://sam.gov/profile/details
+  usaspending: null                        # no key required, public API
+
+# --- ALERT DELIVERY ---
+alerts:
+  email:
+    enabled: true
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    sender: "your@gmail.com"
+    password: "YOUR_APP_PASSWORD"          # use Gmail App Password, not main password
+    recipients:
+      - "your@gmail.com"
+  slack:
+    enabled: false
+    webhook_url: "YOUR_SLACK_WEBHOOK_URL"
+  sms:
+    enabled: false
+    twilio_sid: "YOUR_TWILIO_SID"
+    twilio_token: "YOUR_TWILIO_AUTH_TOKEN"
+    from_number: "+1XXXXXXXXXX"
+    to_number: "+1XXXXXXXXXX"
+
+# --- MONITORING SCHEDULE ---
+schedule:
+  check_interval_hours: 4               # how often to poll APIs
+  lookback_days: 2                      # how far back each query looks (overlap is fine)
+
+# --- FILTERS ---
+filters:
+  min_award_value: 25000                # minimum dollar amount to surface ($25K — lower than
+                                        # trading monitor since smaller shops win these)
+  max_award_value: null                 # no cap
+  set_asides:                           # leave empty to catch all; add codes to filter
+    - "SBA"                             # Small Business
+    - "8A"                              # 8(a) Program
+    - "WOSB"                            # Women-Owned Small Business
+    - "SDVOSB"                          # Service-Disabled Veteran-Owned Small Business
+    - "HZC"                             # HUBZone
+  # set to [] to remove set-aside filter entirely
+
+# --- NAICS CODES TO MONITOR ---
+# These identify video/media/production solicitations
+naics_codes:
+  - code: "512110"
+    label: "Motion Picture and Video Production"
+    priority: HIGH
+  - code: "512191"
+    label: "Teleproduction and Post-Production Services"
+    priority: HIGH
+  - code: "512199"
+    label: "Other Motion Picture and Video Industries"
+    priority: MEDIUM
+  - code: "541810"
+    label: "Advertising Agencies"
+    priority: MEDIUM
+  - code: "541830"
+    label: "Media Buying Agencies"
+    priority: LOW
+  - code: "515120"
+    label: "Television Broadcasting"
+    priority: MEDIUM
+  - code: "519130"
+    label: "Internet Publishing and Broadcasting"
+    priority: LOW
+  - code: "611430"
+    label: "Professional and Management Development Training"
+    priority: MEDIUM   # catches training video RFPs that get misc-classified
+
+# --- KEYWORD CLUSTERS ---
+# Organized by production type. Script searches notice text for these.
+keywords:
+  video_production:
+    - "video production"
+    - "motion picture"
+    - "film production"
+    - "videography"
+    - "video services"
+    - "audiovisual"
+    - "multimedia production"
+
+  training_content:
+    - "training video"
+    - "instructional video"
+    - "eLearning"
+    - "e-learning"
+    - "training film"
+    - "course development"
+    - "instructional design"
+    - "learning management"
+    - "onboarding video"
+
+  broadcast_psa:
+    - "public service announcement"
+    - "PSA"
+    - "broadcast production"
+    - "commercial production"
+    - "television commercial"
+    - "TV spot"
+    - "media campaign"
+    - "public affairs video"
+
+  animation_graphics:
+    - "animation services"
+    - "2D animation"
+    - "3D animation"
+    - "motion graphics"
+    - "visual effects"
+    - "VFX"
+    - "explainer video"
+
+  post_production:
+    - "post-production"
+    - "video editing"
+    - "color grading"
+    - "sound design"
+    - "audio production"
+    - "closed captioning"
+    - "Section 508"           # accessibility compliance — in almost every federal video RFP
+    - "subtitling"
+
+  documentary_content:
+    - "documentary"
+    - "event coverage"
+    - "live streaming"
+    - "conference coverage"
+    - "oral history"
+    - "testimonial"
+
+  studio_equipment:
+    - "studio rental"
+    - "production equipment"
+    - "broadcast equipment"
+    - "camera equipment"
+    - "lighting equipment"
+
+# --- TARGET AGENCIES ---
+# Highest-volume buyers for production work
+target_agencies:
+  tier_1:
+    - name: "Department of Defense"
+      code: "DOD"
+      notes: "Training videos, recruiting content, public affairs"
+    - name: "Department of Veterans Affairs"
+      code: "VA"
+      notes: "Patient education, onboarding, benefits outreach"
+    - name: "Department of Health and Human Services"
+      code: "HHS"
+      notes: "CDC public health campaigns, NIH content, CMS outreach"
+    - name: "Department of Homeland Security"
+      code: "DHS"
+      notes: "Public awareness, recruitment, border/security messaging"
+
+  tier_2:
+    - name: "National Aeronautics and Space Administration"
+      code: "NASA"
+      notes: "STEM education, mission documentation, public outreach"
+    - name: "Department of Transportation"
+      code: "DOT"
+      notes: "Safety campaigns, infrastructure awareness"
+    - name: "Department of Energy"
+      code: "DOE"
+      notes: "Event coverage, scientific communication"
+    - name: "Federal Emergency Management Agency"
+      code: "FEMA"
+      notes: "Disaster preparedness PSAs, emergency comms"
+    - name: "Environmental Protection Agency"
+      code: "EPA"
+      notes: "Environmental awareness campaigns"
+    - name: "Department of Labor"
+      code: "DOL"
+      notes: "Workplace safety videos, workforce training"
+    - name: "Department of Education"
+      code: "ED"
+      notes: "eLearning content, educational campaigns"
+    - name: "General Services Administration"
+      code: "GSA"
+      notes: "Internal agency communications, GSA Schedule buys"
+
+# --- SIGNAL SCORING ---
+# Scores each award 1-10 for alert priority
+scoring:
+  base_score: 3
+  boosts:
+    high_priority_naics: +3           # 512110 or 512191
+    high_priority_keywords: +2        # video production, training video, PSA cluster
+    tier_1_agency: +2                 # DoD, VA, HHS, DHS
+    value_over_100k: +1
+    value_over_500k: +2
+    set_aside_eligible: +1            # small business set-aside = less competition
+    section_508_mentioned: +1         # compliance requirement means specialized need
+  thresholds:
+    alert_minimum: 4                  # only alert if score >= this
+    high_priority_alert: 7            # flag as HIGH PRIORITY in alert
+
+# --- OPPORTUNITY TYPE ---
+# Whether to monitor open solicitations (bids you can respond to)
+# vs awards (already won, competitive intel)
+opportunity_monitoring:
+  solicitations: true                 # ACTIVE BIDS — what you actually want to respond to
+  awards: true                        # COMPETITIVE INTEL — who's winning what
+  pre_solicitation: true              # EARLY WARNING — agencies signaling upcoming work
+
+# --- OUTPUT / LOGGING ---
+logging:
+  log_file: "production_monitor.log"
+  results_csv: "production_results.csv"   # running log of all matches
+  log_level: "INFO"
